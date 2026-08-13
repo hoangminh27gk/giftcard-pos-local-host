@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Giftcard POS</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f5f7; color: #1a1a2e; min-height: 100vh; }
+
+  /* ── Nav ── */
+  nav { background: #1a1a2e; color: #fff; display: flex; flex-wrap: wrap; align-items: stretch; }
+  .nav-logo { display: flex; align-items: center; gap: 12px; padding: 8px 20px; border-bottom: 1px solid rgba(255,255,255,.08); flex-shrink: 0; }
+  .nav-tabs { display: flex; align-items: stretch; overflow-x: auto; scrollbar-width: none; flex: 1; }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab { padding: 0 16px; height: 52px; display: flex; align-items: center; white-space: nowrap; font-size: 14px; cursor: pointer; color: rgba(255,255,255,.6); border-bottom: 2px solid transparent; transition: all .15s; flex-shrink: 0; }
+  .nav-tab:hover { color: #fff; background: rgba(255,255,255,.05); }
+  .nav-tab.active { color: #fff; border-bottom-color: #e8c84a; }
+  .nav-tab-end { margin-left: auto; }
+
+  /* ── Layout ── */
+  .app-layout { display: flex; align-items: flex-start; max-width: 1200px; margin: 0 auto; }
+  .sidebar { width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 20px 12px; position: sticky; top: 0; }
+  .sidebar-item { display: flex; align-items: center; gap: 9px; padding: 13px 16px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; color: #374151; background: #fff; border: 1px solid #e5e7eb; transition: all .15s; }
+  .sidebar-item:hover { background: #f9fafb; border-color: #c7cbd1; }
+  .sidebar-item.active { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+  .main-content { flex: 1; min-width: 0; }
+
+  .page { display: none; padding: 24px 20px; }
+  .page.active { display: block; }
+
+  /* ── Cards ── */
+  .card { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 24px; margin-bottom: 20px; }
+  .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 18px; color: #111827; }
+
+  /* ── Stats ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat { background: #fff; border-radius: 10px; padding: 18px; border: 1px solid #e5e7eb; }
+  .stat-label { font-size: 12px; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+  .stat-value { font-size: 26px; font-weight: 700; color: #111827; }
+  .stat-value.green { color: #16a34a; }
+
+  /* ── Forms ── */
+  label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; }
+  input[type=text], input[type=number], select {
+    width: 100%; padding: 11px 14px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 15px; outline: none; transition: border-color .15s;
+    background: #fff; color: #111827; -webkit-appearance: none;
+  }
+  input:focus, select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .form-group { margin-bottom: 14px; }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 22px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all .15s; touch-action: manipulation; }
+  .btn-primary { background: #4f46e5; color: #fff; }
+  .btn-primary:hover { background: #4338ca; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-success:hover { background: #15803d; }
+  .btn-danger  { background: #dc2626; color: #fff; }
+  .btn-danger:hover  { background: #b91c1c; }
+  .btn-outline { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+  .btn-outline:hover { background: #f9fafb; }
+  .btn-sm { padding: 7px 14px; font-size: 13px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-block { width: 100%; }
+
+  /* ── Alert ── */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: none; }
+  .alert.show { display: block; }
+  .alert-error   { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+  .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+
+  /* ── Card info ── */
+  .card-info { display: none; }
+  .card-info.show { display: block; }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { color: #6b7280; }
+  .info-value { font-weight: 500; color: #111827; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+  .badge-active  { background: #dcfce7; color: #15803d; }
+  .badge-partial { background: #fef9c3; color: #854d0e; }
+  .badge-used    { background: #fee2e2; color: #991b1b; }
+
+  /* ── Balance display ── */
+  .balance-display { text-align: center; padding: 20px; background: #f0fdf4; border-radius: 10px; margin-bottom: 16px; }
+  .balance-display .amount { font-size: 44px; font-weight: 800; color: #15803d; }
+  .balance-display .code   { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+  /* ── Transactions ── */
+  .txn-list { margin-top: 4px; }
+  .txn { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+  .txn:last-child { border-bottom: none; }
+  .txn-type { font-weight: 600; }
+  .txn-charge { color: #dc2626; }
+  .txn-refill { color: #16a34a; }
+  .txn-import { color: #6366f1; }
+  .txn-remove { color: #6b7280; }
+  .txn-meta   { color: #9ca3af; font-size: 12px; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px; }
+  th { text-align: left; padding: 10px 12px; background: #f9fafb; color: #374151; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid #e5e7eb; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f9fafb; }
+
+  /* ── Search ── */
+  .search-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-row input { flex: 1; min-width: 160px; }
+  .search-row select { width: auto; flex-shrink: 0; }
+
+  /* ── Flex util ── */
+  .flex { display: flex; gap: 10px; align-items: center; }
+  .flex input { flex: 1; min-width: 0; }
+
+  /* ── Receipt ── */
+  .receipt-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+  .receipt-modal.show { display: flex; }
+  .receipt { background: #fff; border-radius: 14px; padding: 28px; width: 100%; max-width: 380px; text-align: center; }
+  .receipt h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .receipt-body { text-align: left; margin: 18px 0; }
+  .receipt-row { display: flex; justify-content: space-between; font-size: 14px; padding: 5px 0; }
+  .receipt-row.total { font-weight: 700; font-size: 16px; border-top: 1px solid #e5e7eb; margin-top: 8px; padding-top: 10px; }
+  .receipt-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .receipt-actions .btn { flex: 1; min-width: 120px; }
+
+  /* ── History day groups ── */
+  .history-group { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+  .history-group-header {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 12px 16px; background: #f9fafb; cursor: pointer; font-weight: 600; font-size: 14px;
+    user-select: none;
+  }
+  .history-group-header:hover { background: #f3f4f6; }
+  .history-group-chevron { display: inline-block; margin-right: 6px; transition: transform .15s; }
+  .history-group.collapsed .history-group-chevron { transform: rotate(-90deg); }
+  .history-group.collapsed .history-group-body { display: none; }
+  .history-group-body table { min-width: 0; }
+
+  /* ── Print receipt ── */
+  #print-receipt { display: none; }
+  @media print {
+    /* Kill the fixed-position modal overlay outright — leaving it merely
+       invisible can still paint as a blank/grey layer over the receipt
+       in some browsers' print snapshot. */
+    .receipt-modal { display: none !important; }
+    body * { visibility: hidden !important; }
+    #print-receipt, #print-receipt * { visibility: visible !important; }
+    #print-receipt {
+      display: block !important; position: absolute !important; top: 0; left: 0; width: 100%;
+      max-width: 320px; margin: 0 auto; padding: 16px;
+      font-family: 'Courier New', monospace; color: #000;
+    }
+    #print-receipt .p-biz-name { font-size: 16px; font-weight: 700; text-align: center; }
+    #print-receipt .p-biz-line { font-size: 12px; text-align: center; }
+    #print-receipt .p-title { font-size: 13px; font-weight: 700; text-align: center; text-transform: uppercase; margin: 8px 0; }
+    #print-receipt .p-divider { border-top: 1px dashed #000; margin: 8px 0; }
+    #print-receipt .p-footer { font-size: 12px; text-align: center; margin-top: 10px; }
+    #print-receipt .receipt-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+    #print-receipt .receipt-row.total { font-weight: 700; border-top: 1px solid #000; margin-top: 4px; padding-top: 6px; }
+  }
+
+  /* ── Upload ── */
+  .upload-zone { border: 2px dashed #d1d5db; border-radius: 10px; padding: 36px 20px; text-align: center; cursor: pointer; transition: all .2s; }
+  .upload-zone:hover, .upload-zone:active { border-color: #6366f1; background: #f5f3ff; }
+  .upload-zone input { display: none; }
+  .upload-icon { font-size: 36px; margin-bottom: 10px; }
+  .upload-text { color: #6b7280; font-size: 14px; }
+  .upload-text strong { color: #4f46e5; }
+
+  /* ── Utils ── */
+  .divider { height: 1px; background: #e5e7eb; margin: 18px 0; }
+  .ml-auto { margin-left: auto; }
+  .text-sm { font-size: 13px; }
+  .text-muted { color: #9ca3af; }
+  .mt-2 { margin-top: 8px; }
+
+  /* ── Tablet (≤768px) ── */
+  @media (max-width: 768px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .sidebar { width: 150px; }
+  }
+
+  /* ── Mobile (≤600px) ── */
+  @media (max-width: 600px) {
+    .nav-logo { width: 100%; border-right: none; }
+    .nav-tabs { width: 100%; border-top: 1px solid rgba(255,255,255,.08); }
+    .nav-tab { height: 46px; font-size: 13px; padding: 0 14px; }
+    .nav-tab-end { margin-left: 0; }
+
+    .app-layout { flex-direction: column; }
+    .sidebar { width: 100%; flex-direction: row; overflow-x: auto; position: static; padding: 10px 12px; gap: 8px; }
+    .sidebar-item { flex-shrink: 0; white-space: nowrap; padding: 10px 14px; }
+
+    .page { padding: 14px 12px; }
+    .card { padding: 16px; border-radius: 10px; }
+    .card h2 { font-size: 15px; margin-bottom: 14px; }
+
+    .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .stat { padding: 12px; }
+    .stat-value { font-size: 20px; }
+    .stat-label { font-size: 11px; }
+
+    .form-row { grid-template-columns: 1fr; gap: 12px; }
+    .form-group { margin-bottom: 12px; }
+    input[type=text], input[type=number], select { font-size: 16px; padding: 12px 14px; }
+
+    .flex { flex-direction: column; align-items: stretch; }
+    .flex input { width: 100%; }
+    .btn { width: 100%; padding: 13px 20px; font-size: 15px; }
+    .btn-sm { width: auto; padding: 8px 14px; font-size: 13px; }
+
+    .search-row { gap: 8px; }
+    .search-row input, .search-row select { width: 100%; flex: none; }
+    .search-row .btn { width: auto; }
+
+    .balance-display .amount { font-size: 36px; }
+    .balance-display { padding: 16px; }
+
+    table { font-size: 12px; min-width: 420px; }
+    th, td { padding: 8px 8px; }
+
+    .receipt { padding: 20px 16px; border-radius: 12px; }
+    .receipt h3 { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <svg width="48" height="48" viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#f5e070"/>
+          <stop offset="40%" stop-color="#c9960c"/>
+          <stop offset="70%" stop-color="#e8b923"/>
+          <stop offset="100%" stop-color="#a07208"/>
+        </linearGradient>
+        <linearGradient id="goldLine" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#1a1208" stop-opacity="1"/>
+          <stop offset="30%" stop-color="#c9960c"/>
+          <stop offset="50%" stop-color="#f5e070"/>
+          <stop offset="70%" stop-color="#c9960c"/>
+          <stop offset="100%" stop-color="#1a1208" stop-opacity="1"/>
+        </linearGradient>
+      </defs>
+      <rect width="680" height="320" fill="#1a1208"/>
+      <rect x="120" y="68" width="440" height="0.8" fill="url(#goldLine)"/>
+      <polygon points="340,56 348,64 340,72 332,64" fill="url(#gold)"/>
+      <text x="340" y="148" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="80" font-weight="700" letter-spacing="18" fill="url(#gold)">GC</text>
+      <rect x="200" y="160" width="280" height="0.7" fill="url(#goldLine)"/>
+      <text x="340" y="235" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="400" letter-spacing="14" fill="#ffffff">POS</text>
+      <rect x="120" y="255" width="440" height="0.8" fill="url(#goldLine)"/>
+      <polygon points="340,264 348,272 340,280 332,272" fill="url(#gold)"/>
+      <circle cx="316" cy="272" r="2" fill="#c9960c"/>
+      <circle cx="364" cy="272" r="2" fill="#c9960c"/>
+    </svg>
+    <div>
+      <div id="nav-biz-name" style="font-size:15px;font-weight:700;color:#e8c84a;letter-spacing:1px;text-transform:uppercase">GIFTCARD POS</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px">POINT OF SALE</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab" onclick="showPage('cards')">All Cards</div>
+    <div class="nav-tab nav-tab-end" onclick="showPage('history')">History</div>
+    <div class="nav-tab" onclick="showPage('import')">Import</div>
+    <div class="nav-tab" onclick="showPage('settings')">Settings</div>
+    <div class="nav-tab" onclick="window.location.href='/logout'" title="Sign out" style="color:rgba(255,255,255,.45)">Logout ⎋</div>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-item active" id="sidebar-charge" onclick="showPage('pos')">💳 Charge Card</div>
+    <div class="sidebar-item" onclick="showPage('refill')">🔄 Refill Card</div>
+    <div class="sidebar-item" onclick="showPage('addcard')">➕ Add Card</div>
+  </aside>
+
+  <main class="main-content">
+
+  <!-- ── POS PAGE ──────────────────────────────────────────────────── -->
+  <div id="page-pos" class="page active">
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat"><div class="stat-label">Total Cards</div><div class="stat-value" id="s-total">—</div></div>
+    <div class="stat"><div class="stat-label">Active</div><div class="stat-value green" id="s-active">—</div></div>
+    <div class="stat"><div class="stat-label">Total Balance</div><div class="stat-value" id="s-balance">—</div></div>
+    <div class="stat"><div class="stat-label">Used</div><div class="stat-value" id="s-used">—</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Look Up Gift Card</h2>
+    <div class="form-group">
+      <label>Gift Card Code</label>
+      <div class="flex">
+        <input type="text" id="lookup-code" placeholder="GC code or MSR ID (e.g. 00001 or 05)" onkeydown="if(event.key==='Enter') lookupCard()" autocomplete="off">
+        <button class="btn btn-primary" onclick="lookupCard()">Look Up</button>
+      </div>
+    </div>
+    <div id="lookup-alert" class="alert"></div>
+    <div id="lookup-matches"></div>
+
+    <div id="card-result" class="card-info">
+      <div class="balance-display">
+        <div class="amount" id="res-balance">$0.00</div>
+        <div class="code" id="res-code"></div>
+      </div>
+
+      <div class="info-row"><span class="info-label">Status</span><span id="res-status"></span></div>
+      <div class="info-row"><span class="info-label">MSR ID</span><span class="info-value" id="res-msr"></span></div>
+      <div class="info-row"><span class="info-label">Customer Mobile</span><span class="info-value" id="res-mobile"></span></div>
+
+      <div class="divider"></div>
+
+      <div id="charge-section">
+        <h2 style="margin-bottom:14px">Charge This Card</h2>
+        <div class="form-row">
+          <div class="form-group" style="margin:0">
+            <label>Amount to Charge ($)</label>
+            <input type="number" id="charge-amount" placeholder="0.00" min="0.01" step="0.01">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Ticket / Order No. (optional)</label>
+            <input type="text" id="charge-ticket" placeholder="e.g. 260700123">
+          </div>
+        </div>
+        <div id="charge-alert" class="alert"></div>
+        <button class="btn btn-danger" onclick="chargeCard()">Charge Card</button>
+      </div>
+
+      <div class="divider"></div>
+      <h2 style="margin-bottom:12px">Recent Transactions</h2>
+      <div class="txn-list" id="txn-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── REFILL PAGE ───────────────────────────────────────────────── -->
+<div id="page-refill" class="page">
+  <div class="card">
+    <h2>Refill / Add Balance</h2>
+    <div class="form-group">
+      <label>Gift Card Code</label>
+      <div class="flex">
+        <input type="text" id="refill-code" placeholder="e.g. 00001" autocomplete="off" onkeydown="if(event.key==='Enter') lookupForRefill()">
+        <button class="btn btn-outline" onclick="lookupForRefill()">Check</button>
+      </div>
+    </div>
+    <div id="refill-lookup-alert" class="alert"></div>
+
+    <div id="refill-panel" class="card-info" style="margin-top:0">
+      <div class="balance-display">
+        <div class="amount" id="refill-res-balance">$0.00</div>
+        <div class="code" id="refill-res-code"></div>
+      </div>
+      <div class="form-group">
+        <label>Amount to Add ($)</label>
+        <input type="number" id="refill-amount" placeholder="0.00" min="0.01" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Note (optional)</label>
+        <input type="text" id="refill-note" placeholder="Reason for refill">
+      </div>
+      <div id="refill-alert" class="alert"></div>
+      <button class="btn btn-success" onclick="refillCard()">Add Balance</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ALL CARDS PAGE ────────────────────────────────────────────── -->
+<div id="page-cards" class="page">
+  <div class="card">
+    <h2>All Gift Cards</h2>
+    <div class="search-row">
+      <input type="text" id="search-q" placeholder="Search by code, MSR ID, or mobile…" oninput="loadCards()">
+      <select id="search-status" onchange="loadCards()">
+        <option value="">All statuses</option>
+        <option value="ACTIVE">Active</option>
+        <option value="PARTIALUSED">Partial</option>
+        <option value="USED">Used</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="loadCards()">Refresh</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>GC Code</th>
+            <th>MSR ID</th>
+            <th>Mobile</th>
+            <th>Balance</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="cards-tbody"></tbody>
+      </table>
+    </div>
+    <div id="cards-empty" class="text-muted text-sm mt-2" style="display:none;padding:16px 0">No cards found.</div>
+  </div>
+</div>
+
+<!-- ── HISTORY PAGE ──────────────────────────────────────────────── -->
+<div id="page-history" class="page">
+  <div class="card">
+    <h2>Transaction History</h2>
+    <div class="search-row">
+      <input type="text" id="hist-q" placeholder="Search by GC code…" oninput="loadHistory()">
+      <select id="hist-type" onchange="loadHistory()">
+        <option value="">All types</option>
+        <option value="CHARGE">Charge</option>
+        <option value="REFILL">Refill</option>
+        <option value="IMPORT">Add / Import</option>
+        <option value="REMOVE">Remove</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="loadHistory()">Refresh</button>
+    </div>
+    <div class="flex" style="margin-bottom:14px">
+      <button class="btn btn-outline btn-sm" id="hist-toggle-all-btn" onclick="toggleAllHistoryGroups()">Collapse All</button>
+      <button class="btn btn-danger btn-sm ml-auto" onclick="clearHistory()">🗑️ Clear History</button>
+    </div>
+    <div id="history-groups"></div>
+    <div id="history-empty" class="text-muted text-sm mt-2" style="display:none;padding:16px 0">No transactions found.</div>
+  </div>
+</div>
+
+<!-- ── IMPORT PAGE ───────────────────────────────────────────────── -->
+<div id="page-import" class="page">
+  <div class="card">
+    <h2>1. Download the Template</h2>
+    <p class="text-muted text-sm" style="margin-bottom:14px">
+      Grab the blank template, fill in your gift card data (one row per card), then upload it below.
+      The first row already has an example — delete it before importing.
+    </p>
+    <a class="btn btn-outline" href="/api/import-template">⬇️ Download Template (.xlsx)</a>
+  </div>
+
+  <div class="card">
+    <h2>2. Import from Excel</h2>
+    <p class="text-muted text-sm" style="margin-bottom:18px">
+      Upload your filled-in template (or existing <strong>giftcard_report.xlsx</strong>) to sync cards into the database. Existing cards will be updated; new ones will be added.
+    </p>
+    <label class="upload-zone" for="excel-file">
+      <div class="upload-icon">📊</div>
+      <div class="upload-text">Drop your Excel file here or <strong>click to browse</strong></div>
+      <div class="text-muted text-sm mt-2" id="file-chosen">No file chosen</div>
+      <input type="file" id="excel-file" accept=".xlsx,.xls" onchange="fileChosen(this)">
+    </label>
+    <div id="import-alert" class="alert" style="margin-top:14px"></div>
+    <button class="btn btn-primary" style="margin-top:14px" onclick="importExcel()">Import Now</button>
+  </div>
+
+  <div class="card">
+    <h2>3. Column Reference</h2>
+    <p class="text-muted text-sm" style="margin-bottom:12px">Your file should have these columns (matching your existing report):</p>
+    <table>
+      <thead><tr><th>Column</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>GC Code</strong></td><td>Unique gift card number (required)</td></tr>
+        <tr><td><strong>MSR ID</strong></td><td>Physical card reader ID</td></tr>
+        <tr><td><strong>Cust Mobile</strong></td><td>Customer phone number</td></tr>
+        <tr><td><strong>Current Balance</strong></td><td>Current dollar balance (required)</td></tr>
+        <tr><td><strong>Status</strong></td><td>ACTIVE / PARTIALUSED / USED</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── SETTINGS PAGE ─────────────────────────────────────────────── -->
+<div id="page-settings" class="page">
+  <div class="card">
+    <h2>Business Info</h2>
+    <p class="text-muted text-sm" style="margin-bottom:14px">Shown in the header and printed on every receipt.</p>
+    <div class="form-group">
+      <label>Business Name</label>
+      <input type="text" id="set-biz-name" placeholder="e.g. My Nail Spa">
+    </div>
+    <div class="form-group">
+      <label>Address</label>
+      <input type="text" id="set-biz-address" placeholder="e.g. 123 Main St, City, ST 00000">
+    </div>
+    <div class="form-group">
+      <label>Phone Number</label>
+      <input type="text" id="set-biz-phone" placeholder="e.g. (555) 123-4567">
+    </div>
+    <div id="set-biz-alert" class="alert"></div>
+    <button class="btn btn-primary" onclick="saveBusinessSettings()">Save Business Info</button>
+  </div>
+
+  <div class="card">
+    <h2>Login Credentials</h2>
+    <div class="form-row">
+      <div class="form-group" style="margin:0">
+        <label>Username</label>
+        <input type="text" id="set-username" autocomplete="off">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Password</label>
+        <div class="flex">
+          <input type="password" id="set-password" autocomplete="off">
+          <button type="button" class="btn btn-outline btn-sm" style="flex:none" onclick="toggleSetPasswordVisibility()" id="set-password-toggle">Show</button>
+        </div>
+      </div>
+    </div>
+    <p class="text-muted text-sm mt-2">Changing this updates the login for everyone immediately.</p>
+    <div id="set-account-alert" class="alert" style="margin-top:10px"></div>
+    <button class="btn btn-primary" style="margin-top:10px" onclick="saveAccountSettings()">Save Credentials</button>
+  </div>
+
+  <div class="card">
+    <h2>Receipt Printing</h2>
+    <div class="form-group">
+      <label>Print Method</label>
+      <select id="set-print-mode" onchange="onPrintModeChange()">
+        <option value="browser">Browser Print Dialog (works with any printer installed on this computer)</option>
+        <option value="usb">Direct USB Thermal Printer (instant, no dialog)</option>
+      </select>
+    </div>
+
+    <div id="usb-printer-section" style="display:none">
+      <div class="form-group">
+        <label>Receipt Paper Width</label>
+        <select id="set-paper-width">
+          <option value="58">58mm</option>
+          <option value="80">80mm</option>
+        </select>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Printer status</span>
+        <span id="printer-status">⚪ No printer connected</span>
+      </div>
+      <div class="flex mt-2">
+        <button class="btn btn-outline" onclick="connectPrinter()">🔌 Connect Printer</button>
+        <button class="btn btn-outline" onclick="disconnectPrinter()">Disconnect</button>
+        <button class="btn btn-outline" onclick="testPrint()">Test Print</button>
+      </div>
+      <p class="text-muted text-sm mt-2" id="usb-support-note">
+        Requires Chrome, Edge, or Brave, and a USB thermal receipt printer (ESC/POS compatible — most generic
+        58mm/80mm USB receipt printers work). Click "Connect Printer" and pick your printer from the browser's
+        device list. You'll need to reconnect once per browser after a restart.
+      </p>
+    </div>
+
+    <div class="form-group mt-2" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="set-auto-print" style="width:auto">
+      <label style="margin:0">Automatically print receipt after every transaction</label>
+    </div>
+    <div id="printer-alert" class="alert" style="margin-top:10px"></div>
+    <button class="btn btn-primary" style="margin-top:10px" onclick="savePrintSettings()">Save Printing Settings</button>
+  </div>
+</div>
+
+<!-- ── ADD CARD PAGE ─────────────────────────────────────────────── -->
+<div id="page-addcard" class="page">
+  <div class="card">
+    <h2>Add Card Manually</h2>
+    <div class="form-row">
+      <div class="form-group" style="margin:0">
+        <label>GC Code <span style="color:#dc2626">*</span></label>
+        <input type="text" id="add-code" placeholder="e.g. 00001" autocomplete="off" onkeydown="if(event.key==='Enter'){ event.preventDefault(); document.getElementById('add-balance').focus(); }">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>MSR ID</label>
+        <input type="text" id="add-msr" placeholder="e.g. 1000-0001-05" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:14px">
+      <div class="form-group" style="margin:0">
+        <label>Customer Mobile</label>
+        <input type="text" id="add-mobile" placeholder="e.g. 0901234567" autocomplete="off">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Starting Balance ($) <span style="color:#dc2626">*</span></label>
+        <input type="number" id="add-balance" placeholder="0.00" min="0" step="0.01">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:14px">
+      <label>Status</label>
+      <select id="add-status" style="width:100%">
+        <option value="ACTIVE">Active</option>
+        <option value="PARTIALUSED">Partial Used</option>
+        <option value="USED">Used</option>
+      </select>
+    </div>
+    <div id="add-alert" class="alert" style="margin-top:14px"></div>
+    <button class="btn btn-primary" style="margin-top:4px" onclick="addCard()">Add Card</button>
+  </div>
+  </div>
+
+  </main>
+</div>
+
+<!-- ── EDIT CARD MODAL ───────────────────────────────────────────── -->
+<div id="edit-modal" class="receipt-modal">
+  <div class="receipt" style="text-align:left">
+    <h3 style="text-align:center">Edit Card</h3>
+    <div class="text-muted text-sm" style="text-align:center" id="edit-code-label"></div>
+    <div class="form-group" style="margin-top:16px">
+      <label>MSR ID</label>
+      <input type="text" id="edit-msr" placeholder="e.g. 1000-0001-05" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Customer Mobile</label>
+      <input type="text" id="edit-mobile" placeholder="e.g. 0901234567" autocomplete="off">
+    </div>
+    <div id="edit-alert" class="alert"></div>
+    <div class="receipt-actions">
+      <button class="btn btn-outline" onclick="closeEdit()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RECEIPT MODAL ─────────────────────────────────────────────── -->
+<div id="receipt-modal" class="receipt-modal">
+  <div class="receipt">
+    <h3 id="receipt-title">✅ Transaction Successful</h3>
+    <div class="text-muted text-sm" id="receipt-sub">Transaction complete</div>
+    <div class="receipt-body" id="receipt-body"></div>
+    <div class="receipt-actions">
+      <button class="btn btn-outline" onclick="printReceipt()">🖨️ Print Receipt</button>
+      <button class="btn btn-outline" onclick="closeReceipt()">Close</button>
+      <button class="btn btn-primary" onclick="newTransaction()">New Transaction</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM MODAL ─────────────────────────────────────────────── -->
+<div id="confirm-modal" class="receipt-modal">
+  <div class="receipt" style="text-align:center">
+    <h3 id="confirm-title">Please Confirm</h3>
+    <div class="text-sm mt-2" id="confirm-message" style="color:#374151"></div>
+    <div class="receipt-actions">
+      <button class="btn btn-outline" id="confirm-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="confirm-ok-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PRINT-ONLY RECEIPT (populated by printReceipt(), only visible via @media print) ── -->
+<div id="print-receipt"></div>
+
+<script>
+let currentCard = null;
+const BIZ = {
+  name: {{ business_name|tojson }},
+  address: {{ business_address|tojson }},
+  phone: {{ business_phone|tojson }}
+};
+document.getElementById('nav-biz-name').textContent = BIZ.name || 'Giftcard POS';
+
+let SETTINGS = { print_mode: 'browser', paper_width: '80', auto_print: 'false' };
+let usbPrinter = null; // { device, epOut }
+
+// ── Nav ───────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab, .sidebar-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (event && event.currentTarget) event.currentTarget.classList.add('active');
+  if (name === 'cards') loadCards();
+  if (name === 'pos') loadStats();
+  if (name === 'history') loadHistory();
+  if (name === 'settings') loadSettingsPage();
+}
+
+// ── Stats ─────────────────────────────────────────────────────────
+async function loadStats() {
+  const res = await fetch('/api/stats').catch(() => null);
+  if (!res) return;
+  if (res.status === 401) { window.location.href = '/login'; return; }
+  const r = await res.json().catch(() => null);
+  if (!r) return;
+  document.getElementById('s-total').textContent   = r.total ?? '—';
+  document.getElementById('s-active').textContent  = r.active ?? '—';
+  document.getElementById('s-used').textContent    = r.used ?? '—';
+  document.getElementById('s-balance').textContent = r.total_balance != null ? '$' + r.total_balance.toFixed(2) : '—';
+}
+loadStats();
+
+// ── Settings (loaded once at startup so print/auto-print prefs are ready immediately) ──
+async function loadSettings() {
+  const res = await fetch('/api/settings').catch(() => null);
+  if (!res || !res.ok) return;
+  SETTINGS = await res.json().catch(() => SETTINGS);
+}
+loadSettings();
+tryReconnectPrinter();
+
+// ── Alert helper ─────────────────────────────────────────────────
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'alert show alert-' + type;
+}
+function hideAlert(id) {
+  const el = document.getElementById(id);
+  if (el) el.className = 'alert';
+}
+
+// ── Custom confirm popup (centered box, replaces browser confirm()) ─
+function showConfirm(message, title) {
+  return new Promise(resolve => {
+    const modal    = document.getElementById('confirm-modal');
+    const okBtn     = document.getElementById('confirm-ok-btn');
+    const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+    document.getElementById('confirm-title').textContent   = title || 'Please Confirm';
+    document.getElementById('confirm-message').textContent = message;
+    modal.classList.add('show');
+
+    function cleanup(result) {
+      modal.classList.remove('show');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function onOk()     { cleanup(true); }
+    function onCancel() { cleanup(false); }
+    function onKey(e) {
+      if (e.key === 'Escape') cleanup(false);
+      if (e.key === 'Enter')  cleanup(true);
+    }
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    document.addEventListener('keydown', onKey);
+    okBtn.focus();
+  });
+}
+
+// ── Lookup ────────────────────────────────────────────────────────
+async function lookupCard() {
+  const code = document.getElementById('lookup-code').value.trim();
+  hideAlert('lookup-alert');
+  document.getElementById('lookup-matches').innerHTML = '';
+  document.getElementById('card-result').classList.remove('show');
+  if (!code) { showAlert('lookup-alert', 'Enter a gift card code or MSR ID.', 'error'); return; }
+
+  if (!(await showConfirm(`Look up gift card "${code}"?`))) return;
+
+  const res  = await fetch('/api/lookup', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ gc_code: code })
+  });
+  const data = await res.json();
+  if (!res.ok) { showAlert('lookup-alert', data.error, 'error'); return; }
+
+  if (data.matches) {
+    showAlert('lookup-alert', `${data.matches.length} cards match MSR ID ending in "${code}" — tap one:`, 'success');
+    document.getElementById('lookup-matches').innerHTML = data.matches.map(m => `
+      <div class="info-row" style="cursor:pointer" onclick="pickMatch('${m.gc_code}')">
+        <span><strong>${m.gc_code}</strong> <span class="text-muted text-sm">MSR ${m.msr_id}</span></span>
+        <span>$${m.balance.toFixed(2)} ${statusBadge(m.status)}</span>
+      </div>
+    `).join('');
+    return;
+  }
+
+  currentCard = data.card;
+  displayCard(data.card, data.transactions);
+}
+
+function pickMatch(code) {
+  document.getElementById('lookup-code').value = code;
+  document.getElementById('lookup-matches').innerHTML = '';
+  lookupCard();
+}
+
+function displayCard(card, txns) {
+  // Make sure charging uses the real GC code even when found via MSR ID
+  document.getElementById('lookup-code').value = card.gc_code;
+  document.getElementById('res-balance').textContent = '$' + card.balance.toFixed(2);
+  document.getElementById('res-code').textContent    = card.gc_code;
+  document.getElementById('res-msr').textContent     = card.msr_id || '—';
+  document.getElementById('res-mobile').textContent  = card.cust_mobile || '—';
+
+  const badge = statusBadge(card.status);
+  document.getElementById('res-status').innerHTML = badge;
+
+  // Disable charge if USED
+  const cs = document.getElementById('charge-section');
+  if (card.status === 'USED' || card.balance <= 0) {
+    cs.style.opacity = '.5';
+    cs.style.pointerEvents = 'none';
+  } else {
+    cs.style.opacity = '1';
+    cs.style.pointerEvents = '';
+  }
+
+  // Transactions
+  const tl = document.getElementById('txn-list');
+  if (!txns || txns.length === 0) {
+    tl.innerHTML = '<div class="text-muted text-sm">No transactions yet.</div>';
+  } else {
+    tl.innerHTML = txns.map(t => `
+      <div class="txn">
+        <div>
+          <span class="txn-type txn-${t.type.toLowerCase()}">${t.type}</span>
+          ${t.ticket_no ? `<span class="text-muted" style="font-size:12px;margin-left:6px">#${t.ticket_no}</span>` : ''}
+          <div class="txn-meta">${t.created_at}</div>
+        </div>
+        <div style="text-align:right">
+          <div>${t.type === 'CHARGE' ? '-' : '+'}$${Math.abs(t.amount).toFixed(2)}</div>
+          <div class="txn-meta">→ $${(t.balance_after || 0).toFixed(2)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('card-result').classList.add('show');
+  document.getElementById('charge-amount').value = '';
+  document.getElementById('charge-ticket').value = '';
+  hideAlert('charge-alert');
+}
+
+function statusBadge(s) {
+  const map = { ACTIVE: 'active', PARTIALUSED: 'partial', USED: 'used' };
+  const cls = map[s] || 'active';
+  return `<span class="badge badge-${cls}">${s}</span>`;
+}
+
+// ── Charge ────────────────────────────────────────────────────────
+async function chargeCard() {
+  hideAlert('charge-alert');
+  const code   = document.getElementById('lookup-code').value.trim();
+  const amount = document.getElementById('charge-amount').value;
+  const ticket = document.getElementById('charge-ticket').value.trim();
+
+  if (!amount || parseFloat(amount) <= 0) {
+    showAlert('charge-alert', 'Enter a valid charge amount.', 'error'); return;
+  }
+  if (!(await showConfirm(`Charge $${parseFloat(amount).toFixed(2)} to card ${code}?`))) return;
+
+  const res  = await fetch('/api/charge', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ gc_code: code, amount: parseFloat(amount), ticket_no: ticket })
+  });
+  const data = await res.json();
+  if (!res.ok) { showAlert('charge-alert', data.error, 'error'); return; }
+
+  showReceipt('CHARGE', data);
+  loadStats();
+}
+
+// ── Receipt ───────────────────────────────────────────────────────
+let lastReceipt = null;
+
+function receiptTitle(type) {
+  return {
+    CHARGE: '✅ Charge Successful', REFILL: '✅ Refill Successful',
+    ADD: '✅ Card Added', REMOVE: '🗑️ Card Removed', BALANCE: '🧾 Balance Receipt',
+  }[type] || 'Receipt';
+}
+
+function receiptRowsHtml(type, data, when) {
+  const common = `
+    <div class="receipt-row"><span>Card</span><strong>${data.gc_code}</strong></div>
+    <div class="receipt-row"><span>Date</span><span>${when}</span></div>`;
+  if (type === 'CHARGE') {
+    return common + `
+      <div class="receipt-row"><span>Previous balance</span><span>$${(data.balance_before || 0).toFixed(2)}</span></div>
+      <div class="receipt-row"><span>Charged</span><span style="color:#dc2626">-$${data.charged.toFixed(2)}</span></div>
+      <div class="receipt-row total"><span>New balance</span><span style="color:#15803d">$${(data.balance_after || 0).toFixed(2)}</span></div>
+      ${data.ticket_no ? `<div class="receipt-row"><span>Ticket</span><span>#${data.ticket_no}</span></div>` : ''}`;
+  }
+  if (type === 'REFILL') {
+    return common + `
+      <div class="receipt-row"><span>Previous balance</span><span>$${(data.balance_before || 0).toFixed(2)}</span></div>
+      <div class="receipt-row"><span>Refilled</span><span style="color:#16a34a">+$${data.refilled.toFixed(2)}</span></div>
+      <div class="receipt-row total"><span>New balance</span><span style="color:#15803d">$${(data.balance_after || 0).toFixed(2)}</span></div>`;
+  }
+  if (type === 'ADD') {
+    return common + `
+      <div class="receipt-row total"><span>Starting balance</span><span style="color:#16a34a">+$${data.balance.toFixed(2)}</span></div>
+      ${data.status ? `<div class="receipt-row"><span>Status</span><span>${data.status}</span></div>` : ''}`;
+  }
+  if (type === 'REMOVE') {
+    return common + `
+      <div class="receipt-row total"><span>Removed balance</span><span style="color:#dc2626">-$${data.removed_balance.toFixed(2)}</span></div>`;
+  }
+  if (type === 'BALANCE') {
+    return common + `
+      <div class="receipt-row total"><span>Current balance</span><span style="color:#15803d">$${data.balance.toFixed(2)}</span></div>
+      ${data.status ? `<div class="receipt-row"><span>Status</span><span>${data.status}</span></div>` : ''}`;
+  }
+  return common;
+}
+
+function printCardBalance(code, balance, status) {
+  showReceipt('BALANCE', { gc_code: code, balance, status });
+}
+
+function showReceipt(type, data, when) {
+  when = when || new Date().toLocaleString();
+  lastReceipt = { type, data, when };
+  document.getElementById('receipt-title').textContent = receiptTitle(type);
+  document.getElementById('receipt-sub').textContent = 'Transaction complete';
+  document.getElementById('receipt-body').innerHTML = receiptRowsHtml(type, data, when);
+  document.getElementById('receipt-modal').classList.add('show');
+  if (SETTINGS.auto_print === 'true') printReceipt();
+}
+
+async function printReceipt() {
+  if (!lastReceipt) return;
+  const { type, data, when } = lastReceipt;
+
+  if (SETTINGS.print_mode === 'usb' && usbPrinter) {
+    try {
+      await printViaUsb(type, data, when);
+      return;
+    } catch (e) {
+      alert('USB printer error: ' + e.message + '\n\nFalling back to the browser print dialog.');
+    }
+  }
+
+  const bodyHtml = `
+    <div class="p-biz-name">${BIZ.name}</div>
+    ${BIZ.address ? `<div class="p-biz-line">${BIZ.address}</div>` : ''}
+    ${BIZ.phone ? `<div class="p-biz-line">${BIZ.phone}</div>` : ''}
+    <div class="p-divider"></div>
+    <div class="p-title">${receiptTitle(type).replace(/^\S+\s/, '')}</div>
+    ${receiptRowsHtml(type, data, when)}
+    <div class="p-divider"></div>
+    <div class="p-footer">Thank you for your business!</div>
+  `;
+  document.getElementById('print-receipt').innerHTML = bodyHtml;
+
+  // Give the browser a full paint cycle before opening the print dialog —
+  // calling print() in the same tick as the DOM update can snapshot a stale
+  // (empty) layout in some browsers, which shows up as a blank preview.
+  requestAnimationFrame(() => setTimeout(() => window.print(), 30));
+}
+
+function closeReceipt() {
+  document.getElementById('receipt-modal').classList.remove('show');
+  // Re-lookup to refresh the balance shown on the POS page after a charge
+  if (lastReceipt && lastReceipt.type === 'CHARGE') lookupCard();
+}
+
+function newTransaction() {
+  document.getElementById('receipt-modal').classList.remove('show');
+  if (lastReceipt && lastReceipt.type === 'CHARGE') {
+    document.getElementById('lookup-code').value = '';
+    document.getElementById('card-result').classList.remove('show');
+    document.getElementById('lookup-code').focus();
+  }
+}
+
+// ── Refill ────────────────────────────────────────────────────────
+async function lookupForRefill() {
+  const code = document.getElementById('refill-code').value.trim();
+  hideAlert('refill-lookup-alert');
+  document.getElementById('refill-panel').classList.remove('show');
+  if (!code) { showAlert('refill-lookup-alert', 'Enter a gift card code.', 'error'); return; }
+  if (!(await showConfirm(`Check gift card "${code}"?`))) return;
+
+  const res  = await fetch('/api/lookup', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ gc_code: code })
+  });
+  const data = await res.json();
+  if (!res.ok) { showAlert('refill-lookup-alert', data.error, 'error'); return; }
+
+  if (data.matches) {
+    showAlert('refill-lookup-alert',
+      'Multiple cards match that MSR ID: ' + data.matches.map(m => m.gc_code).join(', ') + ' — enter the full GC code.',
+      'error');
+    return;
+  }
+
+  document.getElementById('refill-code').value = data.card.gc_code;
+  document.getElementById('refill-res-balance').textContent = '$' + data.card.balance.toFixed(2);
+  document.getElementById('refill-res-code').textContent    = data.card.gc_code;
+  document.getElementById('refill-panel').classList.add('show');
+  document.getElementById('refill-amount').value = '';
+  hideAlert('refill-alert');
+}
+
+async function refillCard() {
+  hideAlert('refill-alert');
+  const code   = document.getElementById('refill-code').value.trim();
+  const amount = document.getElementById('refill-amount').value;
+  const note   = document.getElementById('refill-note').value.trim();
+
+  if (!amount || parseFloat(amount) <= 0) {
+    showAlert('refill-alert', 'Enter a valid amount to add.', 'error'); return;
+  }
+  if (!(await showConfirm(`Add $${parseFloat(amount).toFixed(2)} to card ${code}?`))) return;
+
+  const res  = await fetch('/api/refill', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ gc_code: code, amount: parseFloat(amount), note })
+  });
+  const data = await res.json();
+  if (!res.ok) { showAlert('refill-alert', data.error, 'error'); return; }
+
+  showAlert('refill-alert', `Balance updated: $${data.balance_before.toFixed(2)} → $${data.balance_after.toFixed(2)}`, 'success');
+  document.getElementById('refill-res-balance').textContent = '$' + data.balance_after.toFixed(2);
+  showReceipt('REFILL', data);
+  loadStats();
+}
+
+// ── All cards ─────────────────────────────────────────────────────
+async function loadCards() {
+  const q      = document.getElementById('search-q').value;
+  const status = document.getElementById('search-status').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (status) params.set('status', status);
+
+  const cards = await fetch('/api/all-cards?' + params).then(r => r.json()).catch(() => []);
+  const tbody = document.getElementById('cards-tbody');
+  const empty = document.getElementById('cards-empty');
+
+  if (!cards.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = cards.map(c => `
+    <tr>
+      <td><strong>${c.gc_code}</strong></td>
+      <td>${c.msr_id || '—'}</td>
+      <td>${c.cust_mobile || '—'}</td>
+      <td><strong>$${c.balance.toFixed(2)}</strong></td>
+      <td>${statusBadge(c.status)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-outline btn-sm" onclick="quickLookup('${c.gc_code}')">Charge</button>
+        <button class="btn btn-outline btn-sm" onclick="printCardBalance('${c.gc_code}', ${c.balance}, '${c.status}')" title="Print current balance">🖨️</button>
+        <button class="btn btn-outline btn-sm" onclick="openEdit('${c.gc_code}', '${(c.msr_id || '').replace(/'/g, "\\'")}', '${(c.cust_mobile || '').replace(/'/g, "\\'")}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="removeCard('${c.gc_code}', ${c.balance})">Remove</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+let editingCode = null;
+
+function openEdit(code, msr, mobile) {
+  editingCode = code;
+  document.getElementById('edit-code-label').textContent = code;
+  document.getElementById('edit-msr').value    = msr;
+  document.getElementById('edit-mobile').value = mobile;
+  hideAlert('edit-alert');
+  document.getElementById('edit-modal').classList.add('show');
+  document.getElementById('edit-msr').focus();
+}
+
+function closeEdit() {
+  document.getElementById('edit-modal').classList.remove('show');
+  editingCode = null;
+}
+
+async function saveEdit() {
+  if (!editingCode) return;
+  hideAlert('edit-alert');
+  const res  = await fetch('/api/update-card', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      gc_code: editingCode,
+      msr_id: document.getElementById('edit-msr').value,
+      cust_mobile: document.getElementById('edit-mobile').value
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) { showAlert('edit-alert', data.error || 'Failed to save.', 'error'); return; }
+  closeEdit();
+  loadCards();
+}
+
+async function removeCard(code, balance) {
+  const warn = balance > 0
+    ? `Card ${code} still has a $${balance.toFixed(2)} balance!\n\nAre you sure you want to permanently remove it?`
+    : `Permanently remove card ${code}?`;
+  if (!confirm(warn)) return;
+  if (!confirm(`This cannot be undone. Remove ${code} now?`)) return;
+
+  const res  = await fetch('/api/remove-card', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ gc_code: code })
+  });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error || 'Failed to remove card.'); return; }
+  showReceipt('REMOVE', data);
+  loadCards();
+  loadStats();
+}
+
+function quickLookup(code) {
+  document.getElementById('lookup-code').value = code;
+  // Switch to POS tab
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab, .sidebar-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-pos').classList.add('active');
+  document.getElementById('sidebar-charge').classList.add('active');
+  lookupCard();
+}
+
+// ── History (grouped by day, collapsible) ───────────────────────────
+let lastHistoryTxns = [];
+let collapsedDays = new Set();
+
+function formatDayLabel(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+async function loadHistory() {
+  const q    = document.getElementById('hist-q').value;
+  const type = document.getElementById('hist-type').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (type) params.set('type', type);
+
+  const txns = await fetch('/api/transactions?' + params).then(r => r.json()).catch(() => []);
+  lastHistoryTxns = txns;
+  renderHistoryGroups();
+}
+
+function renderHistoryGroups() {
+  const groupsEl = document.getElementById('history-groups');
+  const empty = document.getElementById('history-empty');
+  const txns = lastHistoryTxns;
+
+  if (!txns.length) {
+    groupsEl.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const groups = [];
+  const byDate = {};
+  txns.forEach((t, i) => {
+    const date = (t.created_at || '').split(' ')[0] || 'Unknown';
+    if (!byDate[date]) { byDate[date] = { date, items: [] }; groups.push(byDate[date]); }
+    byDate[date].items.push({ t, i });
+  });
+
+  groupsEl.innerHTML = groups.map(g => {
+    const collapsed = collapsedDays.has(g.date);
+    const rows = g.items.map(({ t, i }) => {
+      const sign = (t.type === 'CHARGE' || t.type === 'REMOVE') ? '-' : '+';
+      const time = (t.created_at || '').split(' ')[1] || '';
+      return `
+      <tr>
+        <td class="text-muted">${time}</td>
+        <td><strong>${t.gc_code}</strong></td>
+        <td><span class="txn-type txn-${t.type.toLowerCase()}">${t.type}</span></td>
+        <td>${sign}$${Math.abs(t.amount).toFixed(2)}</td>
+        <td>$${(t.balance_after ?? 0).toFixed(2)}</td>
+        <td class="text-muted">${t.ticket_no || t.note || '—'}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="reprintTxn(${i})">🖨️</button></td>
+      </tr>`;
+    }).join('');
+
+    return `
+    <div class="history-group${collapsed ? ' collapsed' : ''}" data-date="${g.date}">
+      <div class="history-group-header" onclick="toggleHistoryGroup('${g.date}')">
+        <span><span class="history-group-chevron">▾</span>${formatDayLabel(g.date)}</span>
+        <span class="text-muted text-sm">${g.items.length} transaction${g.items.length === 1 ? '' : 's'}</span>
+      </div>
+      <div class="history-group-body">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Time</th><th>GC Code</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Ticket / Note</th><th>Receipt</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateToggleAllLabel();
+}
+
+function toggleHistoryGroup(date) {
+  if (collapsedDays.has(date)) collapsedDays.delete(date); else collapsedDays.add(date);
+  const el = document.querySelector('.history-group[data-date="' + CSS.escape(date) + '"]');
+  if (el) el.classList.toggle('collapsed');
+  updateToggleAllLabel();
+}
+
+function toggleAllHistoryGroups() {
+  const groups = document.querySelectorAll('.history-group');
+  const anyExpanded = Array.from(groups).some(g => !g.classList.contains('collapsed'));
+  groups.forEach(g => {
+    if (anyExpanded) { g.classList.add('collapsed'); collapsedDays.add(g.dataset.date); }
+    else { g.classList.remove('collapsed'); collapsedDays.delete(g.dataset.date); }
+  });
+  updateToggleAllLabel();
+}
+
+function updateToggleAllLabel() {
+  const groups = document.querySelectorAll('.history-group');
+  const btn = document.getElementById('hist-toggle-all-btn');
+  if (!groups.length) { btn.textContent = 'Collapse All'; return; }
+  const anyExpanded = Array.from(groups).some(g => !g.classList.contains('collapsed'));
+  btn.textContent = anyExpanded ? 'Collapse All' : 'Expand All';
+}
+
+async function clearHistory() {
+  if (!lastHistoryTxns.length) { alert('There is no transaction history to clear.'); return; }
+  if (!confirm(`Permanently delete all ${lastHistoryTxns.length} transaction record(s) from history? This cannot be undone.`)) return;
+  if (!confirm('This erases the entire transaction log (card balances are not affected). Are you absolutely sure?')) return;
+
+  const res = await fetch('/api/transactions', { method: 'DELETE' });
+  const data = await res.json();
+  if (!res.ok) { alert(data.error || 'Failed to clear history.'); return; }
+  collapsedDays.clear();
+  loadHistory();
+}
+
+function reprintTxn(i) {
+  const t = lastHistoryTxns[i];
+  if (!t) return;
+  let type, data;
+  if (t.type === 'CHARGE') {
+    type = 'CHARGE';
+    data = { gc_code: t.gc_code, balance_before: t.balance_before, charged: t.amount, balance_after: t.balance_after, ticket_no: t.ticket_no };
+  } else if (t.type === 'REFILL') {
+    type = 'REFILL';
+    data = { gc_code: t.gc_code, balance_before: t.balance_before, refilled: t.amount, balance_after: t.balance_after };
+  } else if (t.type === 'REMOVE') {
+    type = 'REMOVE';
+    data = { gc_code: t.gc_code, removed_balance: t.amount };
+  } else {
+    type = 'ADD';
+    data = { gc_code: t.gc_code, balance: t.amount };
+  }
+  showReceipt(type, data, t.created_at);
+  document.getElementById('receipt-sub').textContent = 'Reprinted receipt';
+}
+
+// ── Add Card ──────────────────────────────────────────────────────
+async function addCard() {
+  hideAlert('add-alert');
+  const code    = document.getElementById('add-code').value.trim();
+  const msr     = document.getElementById('add-msr').value.trim();
+  const mobile  = document.getElementById('add-mobile').value.trim();
+  const balance = document.getElementById('add-balance').value;
+  const status  = document.getElementById('add-status').value;
+
+  if (!code) { showAlert('add-alert', 'GC Code is required.', 'error'); return; }
+  if (balance === '' || parseFloat(balance) < 0) { showAlert('add-alert', 'Enter a valid balance (0 or more).', 'error'); return; }
+
+  const res  = await fetch('/api/add-card', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ gc_code: code, msr_id: msr, cust_mobile: mobile, balance: parseFloat(balance), status })
+  });
+  const data = await res.json();
+  if (!res.ok) { showAlert('add-alert', data.error, 'error'); return; }
+
+  showAlert('add-alert', `Card "${data.gc_code}" added successfully with a $${parseFloat(balance).toFixed(2)} balance.`, 'success');
+  document.getElementById('add-code').value    = '';
+  document.getElementById('add-msr').value     = '';
+  document.getElementById('add-mobile').value  = '';
+  document.getElementById('add-balance').value = '';
+  document.getElementById('add-status').value  = 'ACTIVE';
+  showReceipt('ADD', data);
+  loadStats();
+}
+
+// ── Import ────────────────────────────────────────────────────────
+function fileChosen(input) {
+  const name = input.files[0]?.name || 'No file chosen';
+  document.getElementById('file-chosen').textContent = name;
+}
+
+async function importExcel() {
+  const file = document.getElementById('excel-file').files[0];
+  hideAlert('import-alert');
+  if (!file) { showAlert('import-alert', 'Please choose an Excel file first.', 'error'); return; }
+
+  const fd = new FormData();
+  fd.append('file', file);
+
+  showAlert('import-alert', 'Importing… please wait.', 'success');
+  const res  = await fetch('/api/import-excel', { method: 'POST', body: fd });
+  const data = await res.json();
+  if (!res.ok) { showAlert('import-alert', data.error, 'error'); return; }
+
+  showAlert('import-alert', data.message, 'success');
+  loadStats();
+}
+
+// ── Settings page ────────────────────────────────────────────────
+async function loadSettingsPage() {
+  await loadSettings();
+  document.getElementById('set-biz-name').value    = SETTINGS.business_name || '';
+  document.getElementById('set-biz-address').value = SETTINGS.business_address || '';
+  document.getElementById('set-biz-phone').value   = SETTINGS.business_phone || '';
+  document.getElementById('set-username').value    = SETTINGS.app_username || '';
+  document.getElementById('set-password').value    = SETTINGS.app_password || '';
+  document.getElementById('set-print-mode').value  = SETTINGS.print_mode || 'browser';
+  document.getElementById('set-paper-width').value = SETTINGS.paper_width || '80';
+  document.getElementById('set-auto-print').checked = SETTINGS.auto_print === 'true';
+  onPrintModeChange();
+  updatePrinterStatus();
+  if (!navigator.usb) {
+    document.getElementById('usb-support-note').innerHTML =
+      '⚠️ This browser does not support direct USB printing (needs Chrome, Edge, or Brave). ' +
+      'You can still print with the Browser Print Dialog option above.';
+  }
+}
+
+function onPrintModeChange() {
+  const mode = document.getElementById('set-print-mode').value;
+  document.getElementById('usb-printer-section').style.display = mode === 'usb' ? '' : 'none';
+}
+
+async function saveBusinessSettings() {
+  hideAlert('set-biz-alert');
+  const payload = {
+    business_name: document.getElementById('set-biz-name').value.trim(),
+    business_address: document.getElementById('set-biz-address').value.trim(),
+    business_phone: document.getElementById('set-biz-phone').value.trim(),
+  };
+  const res = await fetch('/api/settings', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) { showAlert('set-biz-alert', data.error || 'Failed to save.', 'error'); return; }
+
+  Object.assign(SETTINGS, payload);
+  BIZ.name = payload.business_name; BIZ.address = payload.business_address; BIZ.phone = payload.business_phone;
+  document.getElementById('nav-biz-name').textContent = BIZ.name || 'Giftcard POS';
+  showAlert('set-biz-alert', 'Business info saved.', 'success');
+}
+
+function toggleSetPasswordVisibility() {
+  const input = document.getElementById('set-password');
+  const btn = document.getElementById('set-password-toggle');
+  const showing = input.type === 'text';
+  input.type = showing ? 'password' : 'text';
+  btn.textContent = showing ? 'Show' : 'Hide';
+}
+
+async function saveAccountSettings() {
+  hideAlert('set-account-alert');
+  const username = document.getElementById('set-username').value.trim();
+  const password = document.getElementById('set-password').value;
+  if (!username || !password) { showAlert('set-account-alert', 'Username and password cannot be empty.', 'error'); return; }
+
+  const res = await fetch('/api/settings', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ app_username: username, app_password: password })
+  });
+  const data = await res.json();
+  if (!res.ok) { showAlert('set-account-alert', data.error || 'Failed to save.', 'error'); return; }
+  showAlert('set-account-alert', 'Login credentials updated.', 'success');
+}
+
+async function savePrintSettings() {
+  hideAlert('printer-alert');
+  const payload = {
+    print_mode: document.getElementById('set-print-mode').value,
+    paper_width: document.getElementById('set-paper-width').value,
+    auto_print: document.getElementById('set-auto-print').checked ? 'true' : 'false',
+  };
+  const res = await fetch('/api/settings', {
+    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) { showAlert('printer-alert', data.error || 'Failed to save.', 'error'); return; }
+  Object.assign(SETTINGS, payload);
+  showAlert('printer-alert', 'Printing settings saved.', 'success');
+}
+
+async function testPrint() {
+  hideAlert('printer-alert');
+  const now = new Date().toLocaleString();
+  const data = { gc_code: 'TEST-0000', balance_before: 50, charged: 5, balance_after: 45, ticket_no: 'TEST' };
+  if (document.getElementById('set-print-mode').value === 'usb') {
+    if (!usbPrinter) { showAlert('printer-alert', 'Connect a printer first.', 'error'); return; }
+    try {
+      await printViaUsb('CHARGE', data, now);
+      showAlert('printer-alert', 'Test receipt sent to the printer.', 'success');
+    } catch (e) {
+      showAlert('printer-alert', 'Print failed: ' + e.message, 'error');
+    }
+  } else {
+    showReceipt('CHARGE', data, now);
+    printReceipt();
+  }
+}
+
+// ── USB thermal printer (WebUSB + raw ESC/POS commands) ────────────
+async function connectPrinter() {
+  if (!navigator.usb) {
+    showAlert('printer-alert', 'This browser does not support direct USB printing. Use Chrome, Edge, or Brave.', 'error');
+    return;
+  }
+  try {
+    const device = await navigator.usb.requestDevice({ filters: [] });
+    await openPrinterDevice(device);
+    showAlert('printer-alert', `Connected: ${device.productName || 'USB printer'}`, 'success');
+  } catch (e) {
+    if (e.name !== 'NotFoundError') showAlert('printer-alert', 'Could not connect: ' + e.message, 'error');
+  }
+  updatePrinterStatus();
+}
+
+async function openPrinterDevice(device) {
+  await device.open();
+  if (device.configuration === null) await device.selectConfiguration(1);
+
+  let ifaceNum = null, epOut = null;
+  for (const conf of device.configurations) {
+    for (const intf of conf.interfaces) {
+      for (const alt of intf.alternates) {
+        const out = alt.endpoints.find(e => e.direction === 'out');
+        if (out) { ifaceNum = intf.interfaceNumber; epOut = out.endpointNumber; break; }
+      }
+      if (epOut !== null) break;
+    }
+    if (epOut !== null) break;
+  }
+  if (epOut === null) throw new Error('No printable USB endpoint found on this device.');
+
+  await device.claimInterface(ifaceNum);
+  usbPrinter = { device, epOut };
+}
+
+async function tryReconnectPrinter() {
+  if (!navigator.usb) return;
+  try {
+    const devices = await navigator.usb.getDevices();
+    if (devices.length) await openPrinterDevice(devices[0]);
+  } catch (e) { /* previously-paired printer not available right now */ }
+  updatePrinterStatus();
+}
+
+function disconnectPrinter() {
+  if (usbPrinter) { usbPrinter.device.close().catch(() => {}); usbPrinter = null; }
+  updatePrinterStatus();
+}
+
+function updatePrinterStatus() {
+  const el = document.getElementById('printer-status');
+  if (!el) return;
+  el.textContent = usbPrinter
+    ? '🟢 Connected: ' + (usbPrinter.device.productName || 'USB Printer')
+    : '⚪ No printer connected';
+}
+
+function escposReceipt(type, data, when) {
+  const enc = new TextEncoder();
+  const bytes = [];
+  const raw  = (...b) => bytes.push(...b);
+  const text = (s) => bytes.push(...enc.encode(s));
+  const width = SETTINGS.paper_width === '58' ? 32 : 42;
+  const line = (label, value) => {
+    const pad = Math.max(1, width - label.length - value.length);
+    text(label + ' '.repeat(pad) + value + '\n');
+  };
+
+  raw(0x1b, 0x40);             // init
+  raw(0x1b, 0x61, 0x01);       // center align
+  raw(0x1b, 0x45, 0x01); text((BIZ.name || 'Giftcard POS') + '\n'); raw(0x1b, 0x45, 0x00); // bold biz name
+  if (BIZ.address) text(BIZ.address + '\n');
+  if (BIZ.phone) text(BIZ.phone + '\n');
+  text('-'.repeat(width) + '\n');
+  text(receiptTitle(type).replace(/^\S+\s/, '').toUpperCase() + '\n');
+  raw(0x1b, 0x61, 0x00);       // left align
+  text('-'.repeat(width) + '\n');
+
+  line('Card', data.gc_code);
+  line('Date', when);
+  if (type === 'CHARGE') {
+    line('Prev Balance', '$' + (data.balance_before || 0).toFixed(2));
+    line('Charged', '-$' + data.charged.toFixed(2));
+    line('New Balance', '$' + (data.balance_after || 0).toFixed(2));
+    if (data.ticket_no) line('Ticket', '#' + data.ticket_no);
+  } else if (type === 'REFILL') {
+    line('Prev Balance', '$' + (data.balance_before || 0).toFixed(2));
+    line('Refilled', '+$' + data.refilled.toFixed(2));
+    line('New Balance', '$' + (data.balance_after || 0).toFixed(2));
+  } else if (type === 'ADD') {
+    line('Start Balance', '+$' + data.balance.toFixed(2));
+    if (data.status) line('Status', data.status);
+  } else if (type === 'REMOVE') {
+    line('Removed', '-$' + data.removed_balance.toFixed(2));
+  } else if (type === 'BALANCE') {
+    line('Balance', '$' + data.balance.toFixed(2));
+    if (data.status) line('Status', data.status);
+  }
+
+  text('-'.repeat(width) + '\n');
+  raw(0x1b, 0x61, 0x01); text('Thank you for your business!\n'); raw(0x1b, 0x61, 0x00);
+  text('\n\n\n');
+  raw(0x1d, 0x56, 0x42, 0x00); // partial cut
+  return new Uint8Array(bytes);
+}
+
+async function printViaUsb(type, data, when) {
+  if (!usbPrinter) throw new Error('No USB printer connected.');
+  const payload = escposReceipt(type, data, when);
+  await usbPrinter.device.transferOut(usbPrinter.epOut, payload);
+}
+</script>
+</body>
+</html>

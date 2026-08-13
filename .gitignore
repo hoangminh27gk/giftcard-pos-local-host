@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+giftcards.db
+.env
+venv/
+.venv/
